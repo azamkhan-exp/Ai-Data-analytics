@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import FileUpload from './components/FileUpload';
@@ -8,6 +8,8 @@ import Statistics from './components/Statistics';
 import Visualizations from './components/Visualizations';
 import AiInsights from './components/AiInsights';
 import ChatInterface from './components/ChatInterface';
+import AnomaliesView from './components/AnomaliesView';
+import DataQualityView from './components/DataQualityView';
 import DataCleanerModal from './components/DataCleanerModal';
 import ExportModal from './components/ExportModal';
 
@@ -20,6 +22,29 @@ export default function App() {
   const [visualizations, setVisualizations] = useState(null);
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Mobile navigation drawer state
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Dark mode state
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('insightpulse_theme');
+      if (saved) return saved === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('insightpulse_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('insightpulse_theme', 'light');
+    }
+  }, [isDark]);
 
   // Modals
   const [isCleanerOpen, setIsCleanerOpen] = useState(false);
@@ -81,7 +106,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -89,6 +114,8 @@ export default function App() {
         datasetInfo={datasetInfo}
         onOpenCleaner={() => setIsCleanerOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
+        isMobileNavOpen={isMobileNavOpen}
+        setIsMobileNavOpen={setIsMobileNavOpen}
       />
 
       {/* Main Container */}
@@ -99,10 +126,14 @@ export default function App() {
           onLoadDataset={handleLoadSample}
           onResetUpload={handleResetUpload}
           loading={loading}
+          isMobileNavOpen={isMobileNavOpen}
+          setIsMobileNavOpen={setIsMobileNavOpen}
+          isDark={isDark}
+          setIsDark={setIsDark}
         />
 
         {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
           {/* 1. Upload Tab */}
           {activeTab === 'upload' && (
             <FileUpload
@@ -116,7 +147,11 @@ export default function App() {
           {/* 2. Overview Tab */}
           {activeTab === 'overview' && analysis && (
             <div className="space-y-6">
-              <MetricCards summary={analysis.summary} />
+              <MetricCards
+                summary={analysis.summary}
+                qualityScore={analysis.quality_score}
+                smartKpis={analysis.smart_kpis}
+              />
               <DataPreview
                 previewRows={analysis.preview_rows}
                 columnDetails={analysis.column_details}
@@ -125,7 +160,28 @@ export default function App() {
             </div>
           )}
 
-          {/* 3. Statistics Tab */}
+          {/* 3. Explorer Tab (Dedicated Full Preview & Schema) */}
+          {activeTab === 'explorer' && analysis && (
+            <div className="space-y-6">
+              <DataPreview
+                previewRows={analysis.preview_rows}
+                columnDetails={analysis.column_details}
+                totalRows={analysis.summary.total_rows}
+              />
+            </div>
+          )}
+
+          {/* 4. Visualizations Tab */}
+          {activeTab === 'visualizations' && visualizations && datasetInfo && (
+            <Visualizations
+              visualizations={visualizations}
+              datasetId={datasetInfo.dataset_id}
+              columnTypes={analysis?.column_types}
+              columns={datasetInfo.columns}
+            />
+          )}
+
+          {/* 5. Statistics Tab */}
           {activeTab === 'statistics' && analysis && (
             <Statistics
               numericalStats={analysis.numerical_stats}
@@ -134,22 +190,28 @@ export default function App() {
             />
           )}
 
-          {/* 4. Visualizations Tab */}
-          {activeTab === 'visualizations' && visualizations && datasetInfo && (
-            <Visualizations
-              visualizations={visualizations}
-              datasetId={datasetInfo.dataset_id}
-              columnTypes={analysis.column_types}
-              columns={datasetInfo.columns}
+          {/* 6. Anomalies Tab */}
+          {activeTab === 'anomalies' && analysis && (
+            <AnomaliesView
+              anomalySummary={analysis.anomaly_summary}
+              numericalStats={analysis.numerical_stats}
             />
           )}
 
-          {/* 5. AI Insights Tab */}
+          {/* 7. Data Quality Tab */}
+          {activeTab === 'quality' && analysis && (
+            <DataQualityView
+              qualityScore={analysis.quality_score}
+              onOpenCleaner={() => setIsCleanerOpen(true)}
+            />
+          )}
+
+          {/* 8. AI Insights Tab */}
           {activeTab === 'insights' && (
             <AiInsights insights={insights} />
           )}
 
-          {/* 6. Ask Your Data Tab */}
+          {/* 9. Ask Your Data Tab */}
           {activeTab === 'ask' && datasetInfo && (
             <ChatInterface datasetId={datasetInfo.dataset_id} />
           )}

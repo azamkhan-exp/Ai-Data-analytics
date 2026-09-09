@@ -1,8 +1,21 @@
 import axios from 'axios';
 
+/**
+ * Computes the API base URL dynamically:
+ * - If VITE_API_URL is configured (production on Vercel), points to the deployed Python FastAPI service.
+ * - If not configured (local development), uses the Vite reverse proxy path '/api'.
+ */
+export const getBaseApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/$/, '') + '/api';
+  }
+  return '/api';
+};
+
 const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
+  baseURL: getBaseApiUrl(),
+  timeout: 60000,
 });
 
 export const getHealth = async () => {
@@ -60,7 +73,7 @@ export const cleanDataset = async (datasetId, options) => {
 };
 
 export const getExportUrl = (datasetId, format = 'csv') => {
-  return `/api/export/${datasetId}?format=${format}`;
+  return `${getBaseApiUrl()}/export/${datasetId}?format=${format}`;
 };
 
 export default api;

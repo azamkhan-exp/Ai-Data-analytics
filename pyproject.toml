@@ -1,2 +1,12 @@
+[project]
+name = "ai-data-analytics-backend"
+version = "0.1.0"
+description = "AI Data Analytics Backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+]
+
 [tool.vercel]
-entrypoint = "backend.main:app"
+entrypoint = "main:app"
